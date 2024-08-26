@@ -1,13 +1,8 @@
 let steps = [];
 let isRecording = false;
 
-document.getElementById("startRecording").addEventListener("click", () => {
-  startRecording();
-});
-
-document.getElementById("stopRecording").addEventListener("click", () => {
-  stopRecording();
-});
+document.getElementById("startRecording").addEventListener("click", startRecording);
+document.getElementById("stopRecording").addEventListener("click", stopRecording);
 
 function startRecording() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -18,6 +13,7 @@ function startRecording() {
       }
       console.log(response.status);
       isRecording = true;
+      updateUI();
     });
   });
 }
@@ -30,9 +26,8 @@ function stopRecording() {
         return;
       }
       console.log(response.status);
-      steps = response.steps;
       isRecording = false;
-      updateStepList();
+      updateUI();
     });
   });
 }
@@ -41,22 +36,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "updateSteps") {
     steps = message.steps;
     updateStepList();
-  }
-});
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete') {
-    if (isRecording) {
-      chrome.tabs.sendMessage(tabId, { action: "getRecordingStatus" }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError);
-          return;
-        }
-        if (!response.isRecording) {
-          startRecording();
-        }
-      });
-    }
   }
 });
 
@@ -107,3 +86,17 @@ async function processScreenshot(step) {
   img.src = step.screenshot;
   step.screenshot = await addRedCircle(img, step.x, step.y);
 }
+
+function updateUI() {
+  chrome.runtime.sendMessage({ action: "getState" }, (response) => {
+    isRecording = response.isRecording;
+    steps = response.steps;
+    updateStepList();
+    
+    document.getElementById("startRecording").style.display = isRecording ? "none" : "block";
+    document.getElementById("stopRecording").style.display = isRecording ? "block" : "none";
+  });
+}
+
+// Initialize the side panel
+updateUI();

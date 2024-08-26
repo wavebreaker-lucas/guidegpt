@@ -1,17 +1,26 @@
-function initializeContentScript() {
-  let isRecording = false;
-  let steps = [];
+let isRecording = false;
+let steps = [];
 
+function initializeContentScript() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "startRecording") {
+    if (message.action === "initState") {
+      isRecording = message.isRecording;
+      steps = message.steps;
+    } else if (message.action === "startRecording") {
       isRecording = true;
-      steps = [];
+      chrome.runtime.sendMessage({ action: "setRecordingState", isRecording: true });
       sendResponse({ status: "Recording started" });
     } else if (message.action === "stopRecording") {
       isRecording = false;
-      sendResponse({ status: "Recording stopped", steps: steps });
+      chrome.runtime.sendMessage({ action: "setRecordingState", isRecording: false });
+      sendResponse({ status: "Recording stopped" });
     } else if (message.action === "getRecordingStatus") {
-      sendResponse({ isRecording: isRecording, steps: steps });
+      chrome.runtime.sendMessage({ action: "getState" }, (response) => {
+        sendResponse({ isRecording: response.isRecording, steps: response.steps });
+      });
+      return true; // Indicates that the response is sent asynchronously
+    } else if (message.action === "updateSteps") {
+      steps = message.steps;
     }
   });
 
@@ -32,8 +41,7 @@ function initializeContentScript() {
       }
 
       step.screenshot = response.screenshotUrl;
-      steps.push(step);
-      chrome.runtime.sendMessage({ action: "updateSteps", steps: steps });
+      chrome.runtime.sendMessage({ action: "addStep", step: step });
     });
   });
 }
