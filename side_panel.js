@@ -1,6 +1,15 @@
 let steps = [];
+let isRecording = false;
 
 document.getElementById("startRecording").addEventListener("click", () => {
+  startRecording();
+});
+
+document.getElementById("stopRecording").addEventListener("click", () => {
+  stopRecording();
+});
+
+function startRecording() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.tabs.sendMessage(tabs[0].id, { action: "startRecording" }, (response) => {
       if (chrome.runtime.lastError) {
@@ -8,11 +17,12 @@ document.getElementById("startRecording").addEventListener("click", () => {
         return;
       }
       console.log(response.status);
+      isRecording = true;
     });
   });
-});
+}
 
-document.getElementById("stopRecording").addEventListener("click", () => {
+function stopRecording() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.tabs.sendMessage(tabs[0].id, { action: "stopRecording" }, (response) => {
       if (chrome.runtime.lastError) {
@@ -21,15 +31,32 @@ document.getElementById("stopRecording").addEventListener("click", () => {
       }
       console.log(response.status);
       steps = response.steps;
+      isRecording = false;
       updateStepList();
     });
   });
-});
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "updateSteps") {
     steps = message.steps;
     updateStepList();
+  }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    if (isRecording) {
+      chrome.tabs.sendMessage(tabId, { action: "getRecordingStatus" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(chrome.runtime.lastError);
+          return;
+        }
+        if (!response.isRecording) {
+          startRecording();
+        }
+      });
+    }
   }
 });
 
