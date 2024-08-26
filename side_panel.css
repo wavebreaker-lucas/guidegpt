@@ -1,0 +1,38 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 10px;
+  width: 300px;
+}
+
+#controls {
+  margin-bottom: 20px;
+}
+
+button {
+  padding: 5px 10px;
+  margin-right: 10px;
+}
+
+#stepList {
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+}
+
+.step {
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+.step img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.step-info {
+  font-size: 12px;
+  color: #666;
+}
