@@ -29,15 +29,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   } else if (message.action === "addStep") {
     steps.push(message.step);
-    // Broadcast the updated steps to all tabs
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, { action: "updateSteps", steps: steps });
-      });
-    });
+    broadcastUpdate();
   } else if (message.action === "setRecordingState") {
     isRecording = message.isRecording;
+    broadcastUpdate();
   } else if (message.action === "getState") {
     sendResponse({ isRecording: isRecording, steps: steps });
   }
 });
+
+function broadcastUpdate() {
+  // Broadcast the updated state to all tabs and the side panel
+  const updateMessage = { action: "updateSteps", steps: steps, isRecording: isRecording };
+  
+  chrome.runtime.sendMessage(updateMessage);
+  
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      chrome.tabs.sendMessage(tab.id, updateMessage);
+    });
+  });
+}
