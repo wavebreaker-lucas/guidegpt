@@ -1,49 +1,142 @@
-let isRecording = false;
-let steps = [];
+// Use 'var' instead of 'let' for these global variables
+var isRecording = false;
+var steps = [];
+var isProcessingClick = false;
+
+function sendMessageWithRetry(message, callback, maxRetries = 3, delay = 1000) {
+  let retries = 0;
+
+  function attemptSend() {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending message:", chrome.runtime.lastError);
+        if (retries < maxRetries) {
+          retries++;
+          setTimeout(attemptSend, delay);
+        } else {
+          console.error("Max retries reached. Message failed.");
+          callback({ error: "Max retries reached" });
+        }
+      } else {
+        callback(response);
+      }
+    });
+  }
+
+  attemptSend();
+}
 
 function initializeContentScript() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "initState") {
-      isRecording = message.isRecording;
-      steps = message.steps;
-    } else if (message.action === "startRecording") {
-      isRecording = true;
-      chrome.runtime.sendMessage({ action: "setRecordingState", isRecording: true });
-      sendResponse({ status: "Recording started" });
-    } else if (message.action === "stopRecording") {
-      isRecording = false;
-      chrome.runtime.sendMessage({ action: "setRecordingState", isRecording: false });
-      sendResponse({ status: "Recording stopped" });
-    } else if (message.action === "getRecordingStatus") {
-      chrome.runtime.sendMessage({ action: "getState" }, (response) => {
-        sendResponse({ isRecording: response.isRecording, steps: response.steps });
-      });
-      return true; // Indicates that the response is sent asynchronously
-    } else if (message.action === "updateSteps") {
-      steps = message.steps;
+    console.log("Received message:", message);
+    switch (message.action) {
+      case "initState":
+        isRecording = message.isRecording;
+        steps = message.steps;
+        sendResponse({ success: true });
+        break;
+      case "startRecording":
+        isRecording = true;
+        sendMessageWithRetry({ action: "setRecordingState", isRecording: true }, (response) => {
+          sendResponse({ status: response.error ? "Failed to start recording" : "Recording started" });
+        });
+        return true;
+      case "stopRecording":
+        isRecording = false;
+        sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
+          sendResponse({ status: response.error ? "Failed to stop recording" : "Recording stopped" });
+        });
+        return true;
+      case "getRecordingStatus":
+        sendMessageWithRetry({ action: "getState" }, (response) => {
+          if (response.error) {
+            sendResponse({ error: "Failed to get recording status" });
+          } else {
+            sendResponse({ isRecording: response.isRecording, steps: response.steps });
+          }
+        });
+        return true;
+      case "updateSteps":
+        steps = message.steps;
+        isRecording = message.isRecording; // Update isRecording based on the message
+        sendResponse({ success: true });
+        break;
+      default:
+        console.warn("Unknown message action:", message.action);
+        sendResponse({ error: "Unknown action" });
     }
   });
 
-  document.addEventListener("click", (event) => {
-    if (!isRecording) return;
+  document.addEventListener("click", handleClick, true);
+}
 
-    const step = {
-      x: event.clientX,
-      y: event.clientY,
-      timestamp: new Date().toISOString(),
-      url: window.location.href
-    };
+async function handleClick(event) {
+  console.log("Click event detected");
+  console.log("isRecording:", isRecording);
+  console.log("isProcessingClick:", isProcessingClick);
+  
+  if (!isRecording || isProcessingClick) {
+    console.log("Not recording or already processing click");
+    return;
+  }
+  
+  console.log("Processing click");
+  isProcessingClick = true;
 
-    chrome.runtime.sendMessage({ action: "captureScreenshot" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
+  const isLink = event.target.tagName === 'A' || event.target.closest('a');
+  if (isLink) {
+    event.preventDefault();
+  }
+
+  const step = {
+    x: event.clientX,
+    y: event.clientY,
+    timestamp: new Date().toISOString(),
+    url: window.location.href,
+    target: {
+      tagName: event.target.tagName,
+      id: event.target.id,
+      className: event.target.className,
+      innerText: event.target.innerText
+    }
+  };
+
+  console.log("Step details:", step);
+
+  document.body.style.pointerEvents = 'none';
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    sendMessageWithRetry({ 
+      action: "captureVisibleTab"
+    }, (response) => {
+      console.log("Capture response:", response);
+      if (response.error) {
+        console.error("Error capturing screenshot:", response.error);
         return;
       }
 
-      step.screenshot = response.screenshotUrl;
-      chrome.runtime.sendMessage({ action: "addStep", step: step });
+      step.screenshot = response.dataUrl;
+      sendMessageWithRetry({ action: "addStep", step: step }, (addStepResponse) => {
+        console.log("Add step response:", addStepResponse);
+        if (addStepResponse.error) {
+          console.error("Error adding step:", addStepResponse.error);
+        } else {
+          console.log("Step added successfully");
+          if (isLink && event.target.href) {
+            window.location.href = event.target.href;
+          }
+        }
+        document.body.style.pointerEvents = '';
+        isProcessingClick = false;
+      });
     });
-  });
+  } catch (error) {
+    console.error("Error processing click:", error);
+    document.body.style.pointerEvents = '';
+    isProcessingClick = false;
+  }
 }
 
 initializeContentScript();

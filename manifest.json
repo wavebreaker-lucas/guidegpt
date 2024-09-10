@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Step-by-Step Guide Creator",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "Creates step-by-step guides with automatic screenshots and click highlights.",
   "permissions": [
     "activeTab",
@@ -27,5 +27,15 @@
       "resources": ["side_panel.html", "side_panel.js", "side_panel.css"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
 }
