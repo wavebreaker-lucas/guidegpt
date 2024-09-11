@@ -122,8 +122,15 @@ async function handleClick(event) {
   console.log("isRecording:", isRecording);
   console.log("isProcessingClick:", isProcessingClick);
   
-  if (!isRecording || isProcessingClick) {
-    console.log("Not recording or already processing click");
+  // Only proceed if this is a genuine user-initiated click
+  if (!event.isTrusted) {
+    console.log("Ignoring non-trusted event:", event);
+    return;
+  }
+  
+  // Filter out events with invalid coordinates
+  if (!isRecording || isProcessingClick || event.clientX === undefined || event.clientY === undefined) {
+    console.log("Not recording, already processing click, or invalid coordinates. Skipping this event.");
     return;
   }
   
@@ -138,9 +145,12 @@ async function handleClick(event) {
     targetHref = linkElement.href;
   }
 
+  const rect = event.target.getBoundingClientRect();
   const step = {
-    x: event.clientX,
-    y: event.clientY,
+    x: event.clientX + window.pageXOffset,
+    y: event.clientY + window.pageYOffset,
+    frameX: rect.left + window.pageXOffset,
+    frameY: rect.top + window.pageYOffset,
     timestamp: new Date().toISOString(),
     url: window.location.href,
     target: {
