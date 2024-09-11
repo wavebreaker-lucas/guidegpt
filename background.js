@@ -54,7 +54,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true; // Indicates that the response is sent asynchronously
 
     case "addStep":
-      steps.push(message.step);
+      if (message.step.type === "iframeInteraction") {
+        // Handle iframe interaction step
+        const iframeStep = {
+          ...message.step,
+          frameId: sender.frameId,
+          tabId: sender.tab.id
+        };
+        steps.push(iframeStep);
+      } else {
+        // Handle regular step
+        steps.push(message.step);
+      }
       broadcastUpdate();
       sendResponse({ success: true });
       break;
