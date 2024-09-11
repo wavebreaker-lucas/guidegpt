@@ -127,15 +127,15 @@ async function handleClick(event) {
   console.log("Processing click");
   isProcessingClick = true;
 
-  const isLink = event.target.tagName === 'A' || event.target.closest('a');
+  const isLink = event.target && (event.target.tagName === 'A' || event.target.closest('a'));
   let targetHref = '';
   if (isLink) {
     event.preventDefault();
     const linkElement = event.target.tagName === 'A' ? event.target : event.target.closest('a');
-    targetHref = linkElement.href;
+    targetHref = linkElement ? linkElement.href : '';
   }
 
-  const rect = event.target.getBoundingClientRect();
+  const rect = event.target ? event.target.getBoundingClientRect() : { left: 0, top: 0 };
   const step = {
     type: 'click',
     x: event.clientX + window.pageXOffset,
@@ -144,13 +144,13 @@ async function handleClick(event) {
     frameY: rect.top + window.pageYOffset,
     timestamp: new Date().toISOString(),
     url: window.location.href,
-    target: {
-      tagName: event.target.tagName,
-      id: event.target.id,
-      className: event.target.className,
-      innerText: event.target.innerText,
+    target: event.target ? {
+      tagName: event.target.tagName || '',
+      id: event.target.id || '',
+      className: event.target.className || '',
+      innerText: event.target.innerText || '',
       href: targetHref
-    }
+    } : {}
   };
 
   console.log("Step details:", step);
@@ -167,8 +167,12 @@ async function handleClick(event) {
         if (response.error) {
           console.error("Error capturing screenshot:", response.error);
           reject(response.error);
+        } else if (!response.dataUrl) {
+          console.error("Screenshot capture failed: No dataUrl received");
+          reject(new Error("No screenshot data received"));
         } else {
           step.screenshot = response.dataUrl;
+          console.log("Screenshot captured successfully");
           resolve();
         }
       });
@@ -182,14 +186,14 @@ async function handleClick(event) {
           console.error("Error adding step:", addStepResponse.error);
           reject(addStepResponse.error);
         } else {
-          console.log("Step added successfully");
+          console.log("Step added successfully with screenshot");
           resolve();
         }
       });
     });
 
   } catch (error) {
-    console.error("Error processing click:", error);
+    console.error("Error processing click or capturing screenshot:", error);
   } finally {
     document.body.style.pointerEvents = '';
     isProcessingClick = false;
