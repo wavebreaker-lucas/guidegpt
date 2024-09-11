@@ -2,6 +2,8 @@
 var isRecording = false;
 var steps = [];
 var isProcessingClick = false;
+var iframeDebounceTimer = null;
+var recentlyAddedIframes = new Set();
 
 function sendMessageWithRetry(message, callback, maxRetries = 3, delay = 1000) {
   let retries = 0;
@@ -70,50 +72,67 @@ function initializeContentScript() {
   document.addEventListener("click", handleClick, true);
   console.log("Click listener added");
 
-  // Add mutation observer to detect iframe additions
+  // Modified mutation observer
   const observer = new MutationObserver((mutations) => {
-    for (let mutation of mutations) {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach((node) => {
-          if (node.tagName === 'IFRAME') {
-            console.log("Iframe added to DOM");
-            handleIframeAdded(node);
-          }
-        });
-      }
+    if (!isRecording) {
+      console.log("Not recording, ignoring mutations");
+      return;
     }
+    
+    clearTimeout(iframeDebounceTimer);
+    iframeDebounceTimer = setTimeout(() => {
+      let newIframes = false;
+      for (let mutation of mutations) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.tagName === 'IFRAME' && !recentlyAddedIframes.has(node)) {
+              console.log("New Iframe detected:", node.src);
+              recentlyAddedIframes.add(node);
+              newIframes = true;
+            }
+          });
+        }
+      }
+      if (newIframes) {
+        handleIframeAdded();
+      }
+      recentlyAddedIframes.clear();
+    }, 500); // Debounce for 500ms
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
   console.log("Mutation observer added");
 }
 
-function handleIframeAdded(iframe) {
+function handleIframeAdded() {
   if (isRecording) {
+    const iframes = document.querySelectorAll('iframe');
+    const iframeSources = Array.from(iframes).map(iframe => iframe.src);
+    
     const step = {
-      type: 'iframeAdded',
+      type: 'iframesDetected',
       timestamp: new Date().toISOString(),
       url: window.location.href,
-      iframeSrc: iframe.src
+      iframeSources: iframeSources
     };
 
     sendMessageWithRetry({ action: "addStep", step: step }, (response) => {
-      console.log("Iframe step added:", response);
+      console.log("Iframes step added:", response);
     });
 
-    // Attempt to capture screenshot after a short delay
+    // Capture screenshot after a short delay
     setTimeout(() => {
       sendMessageWithRetry({ action: "captureVisibleTab" }, (response) => {
         if (response.error) {
-          console.error("Error capturing screenshot for iframe:", response.error);
+          console.error("Error capturing screenshot for iframes:", response.error);
         } else {
           step.screenshot = response.dataUrl;
           sendMessageWithRetry({ action: "updateStep", step: step }, (updateResponse) => {
-            console.log("Iframe step updated with screenshot:", updateResponse);
+            console.log("Iframes step updated with screenshot:", updateResponse);
           });
         }
       });
-    }, 500); // Adjust this delay as needed
+    }, 500);
   }
 }
 
@@ -124,7 +143,7 @@ async function handleClick(event) {
   
   // Only proceed if this is a genuine user-initiated click
   if (!event.isTrusted) {
-    console.log("Ignoring non-trusted event:", event);
+    console.log("Ignoring non-trusted event");
     return;
   }
   
