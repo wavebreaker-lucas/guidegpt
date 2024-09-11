@@ -24,7 +24,7 @@ function sendMessageWithRetry(message, callback, maxRetries = 3, delay = 1000) {
           setTimeout(attemptSend, delay);
         } else {
           console.error("Max retries reached. Message failed.");
-          callback(null); // Call the callback with null to indicate failure
+          callback(null);
         }
       } else {
         callback(response);
@@ -69,7 +69,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function updateStepList() {
   const stepList = document.getElementById("stepList");
   
-  // Only update new steps
   const currentStepCount = stepList.children.length;
   const fragment = document.createDocumentFragment();
 
@@ -78,7 +77,6 @@ function updateStepList() {
     const stepElement = createStepElement(step, i);
     fragment.appendChild(stepElement);
 
-    // Process the screenshot and update the image asynchronously
     processScreenshot(step).then(processedScreenshot => {
       const img = stepElement.querySelector('img');
       img.src = processedScreenshot;
@@ -93,7 +91,7 @@ function createStepElement(step, index) {
   stepElement.className = "step";
 
   const img = document.createElement("img");
-  img.src = step.screenshot; // Display the screenshot immediately
+  img.src = step.screenshot;
   img.alt = `Step ${index + 1} screenshot`;
   stepElement.appendChild(img);
 
@@ -105,29 +103,29 @@ function createStepElement(step, index) {
   return stepElement;
 }
 
-function addRedCircle(img, x, y) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  canvas.width = img.width;
-  canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-
-  ctx.beginPath();
-  ctx.arc(x, y, 20, 0, 2 * Math.PI);
-  ctx.strokeStyle = "red";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  return canvas.toDataURL();
-}
-
 function processScreenshot(step) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const processedScreenshot = addRedCircle(img, step.x, step.y);
-      resolve(processedScreenshot);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const scaleX = img.width / step.viewportWidth;
+      const scaleY = img.height / step.viewportHeight;
+      const circleX = step.x * scaleX;
+      const circleY = step.y * scaleY;
+
+      ctx.beginPath();
+      ctx.arc(circleX, circleY, 10 * scaleX, 0, 2 * Math.PI);
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2 * scaleX;
+      ctx.stroke();
+
+      resolve(canvas.toDataURL());
     };
     img.src = step.screenshot;
   });
@@ -151,5 +149,4 @@ function updateUI() {
   });
 }
 
-// Initialize the side panel
 updateUI();

@@ -1,4 +1,3 @@
-// Use 'var' instead of 'let' for these global variables
 var isRecording = false;
 var steps = [];
 var isProcessingClick = false;
@@ -58,7 +57,7 @@ function initializeContentScript() {
         return true;
       case "updateSteps":
         steps = message.steps;
-        isRecording = message.isRecording; // Update isRecording based on the message
+        isRecording = message.isRecording;
         sendResponse({ success: true });
         break;
       default:
@@ -97,7 +96,6 @@ function handleIframeInteraction(event) {
       console.log("Iframe interaction step added:", response);
     });
 
-    // Capture screenshot after a short delay
     setTimeout(() => {
       sendMessageWithRetry({ action: "captureVisibleTab" }, (response) => {
         if (response.error) {
@@ -135,13 +133,17 @@ async function handleClick(event) {
     targetHref = linkElement ? linkElement.href : '';
   }
 
-  const rect = event.target ? event.target.getBoundingClientRect() : { left: 0, top: 0 };
   const step = {
     type: 'click',
-    x: event.clientX + window.pageXOffset,
-    y: event.clientY + window.pageYOffset,
-    frameX: rect.left + window.pageXOffset,
-    frameY: rect.top + window.pageYOffset,
+    x: event.clientX,
+    y: event.clientY,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+    pageX: event.pageX,
+    pageY: event.pageY,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
     timestamp: new Date().toISOString(),
     url: window.location.href,
     target: event.target ? {
@@ -158,7 +160,6 @@ async function handleClick(event) {
   document.body.style.pointerEvents = 'none';
 
   try {
-    // Capture screenshot immediately
     await new Promise((resolve, reject) => {
       sendMessageWithRetry({ 
         action: "captureVisibleTab"
@@ -178,7 +179,6 @@ async function handleClick(event) {
       });
     });
 
-    // Add the step with the screenshot
     await new Promise((resolve, reject) => {
       sendMessageWithRetry({ action: "addStep", step: step }, (addStepResponse) => {
         console.log("Add step response:", addStepResponse);
@@ -198,7 +198,7 @@ async function handleClick(event) {
     document.body.style.pointerEvents = '';
     isProcessingClick = false;
     if (isLink && targetHref) {
-      window.location.href = targetHref; // Navigate after processing
+      window.location.href = targetHref;
     }
   }
 }
