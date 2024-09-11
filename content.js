@@ -84,8 +84,11 @@ async function handleClick(event) {
   isProcessingClick = true;
 
   const isLink = event.target.tagName === 'A' || event.target.closest('a');
+  let targetHref = '';
   if (isLink) {
     event.preventDefault();
+    const linkElement = event.target.tagName === 'A' ? event.target : event.target.closest('a');
+    targetHref = linkElement.href;
   }
 
   const step = {
@@ -97,7 +100,8 @@ async function handleClick(event) {
       tagName: event.target.tagName,
       id: event.target.id,
       className: event.target.className,
-      innerText: event.target.innerText
+      innerText: event.target.innerText,
+      href: targetHref
     }
   };
 
@@ -106,36 +110,44 @@ async function handleClick(event) {
   document.body.style.pointerEvents = 'none';
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
 
-    sendMessageWithRetry({ 
-      action: "captureVisibleTab"
-    }, (response) => {
-      console.log("Capture response:", response);
-      if (response.error) {
-        console.error("Error capturing screenshot:", response.error);
-        return;
-      }
+    await new Promise((resolve, reject) => {
+      sendMessageWithRetry({ 
+        action: "captureVisibleTab"
+      }, (response) => {
+        console.log("Capture response:", response);
+        if (response.error) {
+          console.error("Error capturing screenshot:", response.error);
+          reject(response.error);
+        } else {
+          step.screenshot = response.dataUrl;
+          resolve();
+        }
+      });
+    });
 
-      step.screenshot = response.dataUrl;
+    await new Promise((resolve, reject) => {
       sendMessageWithRetry({ action: "addStep", step: step }, (addStepResponse) => {
         console.log("Add step response:", addStepResponse);
         if (addStepResponse.error) {
           console.error("Error adding step:", addStepResponse.error);
+          reject(addStepResponse.error);
         } else {
           console.log("Step added successfully");
-          if (isLink && event.target.href) {
-            window.location.href = event.target.href;
-          }
+          resolve();
         }
-        document.body.style.pointerEvents = '';
-        isProcessingClick = false;
       });
     });
+
   } catch (error) {
     console.error("Error processing click:", error);
+  } finally {
     document.body.style.pointerEvents = '';
     isProcessingClick = false;
+    if (isLink && targetHref) {
+      window.location.href = targetHref; // Navigate after processing
+    }
   }
 }
 
