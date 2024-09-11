@@ -68,6 +68,53 @@ function initializeContentScript() {
   });
 
   document.addEventListener("click", handleClick, true);
+  console.log("Click listener added");
+
+  // Add mutation observer to detect iframe additions
+  const observer = new MutationObserver((mutations) => {
+    for (let mutation of mutations) {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          if (node.tagName === 'IFRAME') {
+            console.log("Iframe added to DOM");
+            handleIframeAdded(node);
+          }
+        });
+      }
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  console.log("Mutation observer added");
+}
+
+function handleIframeAdded(iframe) {
+  if (isRecording) {
+    const step = {
+      type: 'iframeAdded',
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      iframeSrc: iframe.src
+    };
+
+    sendMessageWithRetry({ action: "addStep", step: step }, (response) => {
+      console.log("Iframe step added:", response);
+    });
+
+    // Attempt to capture screenshot after a short delay
+    setTimeout(() => {
+      sendMessageWithRetry({ action: "captureVisibleTab" }, (response) => {
+        if (response.error) {
+          console.error("Error capturing screenshot for iframe:", response.error);
+        } else {
+          step.screenshot = response.dataUrl;
+          sendMessageWithRetry({ action: "updateStep", step: step }, (updateResponse) => {
+            console.log("Iframe step updated with screenshot:", updateResponse);
+          });
+        }
+      });
+    }, 500); // Adjust this delay as needed
+  }
 }
 
 async function handleClick(event) {
