@@ -110,19 +110,34 @@ function processScreenshot(step) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      // Calculate the dimensions of the viewport without scrollbars
+      const scrollbarWidth = 17; // Assuming a typical scrollbar width
+      const viewportWidth = step.viewportWidth - (step.viewportHeight < img.height ? scrollbarWidth : 0);
+      const viewportHeight = step.viewportHeight - (step.viewportWidth < img.width ? scrollbarWidth : 0);
 
+      // Set canvas size to the viewport size
+      canvas.width = viewportWidth;
+      canvas.height = viewportHeight;
+
+      // Calculate the scale factors
       const scaleX = img.width / step.viewportWidth;
       const scaleY = img.height / step.viewportHeight;
-      const circleX = step.x * scaleX;
-      const circleY = step.y * scaleY;
+
+      // Draw the cropped image
+      ctx.drawImage(
+        img,
+        0, 0, viewportWidth * scaleX, viewportHeight * scaleY,  // Source rectangle
+        0, 0, viewportWidth, viewportHeight  // Destination rectangle
+      );
+
+      // Draw the click indicator
+      const circleX = step.x * (viewportWidth / step.viewportWidth);
+      const circleY = step.y * (viewportHeight / step.viewportHeight);
 
       ctx.beginPath();
-      ctx.arc(circleX, circleY, 10 * scaleX, 0, 2 * Math.PI);
+      ctx.arc(circleX, circleY, 10, 0, 2 * Math.PI);
       ctx.strokeStyle = "red";
-      ctx.lineWidth = 2 * scaleX;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       resolve(canvas.toDataURL());
