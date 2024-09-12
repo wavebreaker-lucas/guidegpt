@@ -84,12 +84,26 @@ function handleIframeInteraction(event) {
   const iframe = event.target.closest('iframe');
   if (iframe) {
     isProcessingClick = true;
+    const iframeRect = iframe.getBoundingClientRect();
     const step = {
       type: 'iframeInteraction',
       timestamp: new Date().toISOString(),
       url: window.location.href,
       iframeSource: iframe.src,
-      interactionType: event.type
+      interactionType: event.type,
+      x: event.clientX,
+      y: event.clientY,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+      iframePosition: {
+        x: iframeRect.x,
+        y: iframeRect.y,
+        width: iframeRect.width,
+        height: iframeRect.height
+      }
     };
 
     sendMessageWithRetry({ action: "addStep", step: step }, (response) => {

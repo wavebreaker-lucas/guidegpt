@@ -24,7 +24,7 @@ function sendMessageWithRetry(message, callback, maxRetries = 3, delay = 1000) {
           setTimeout(attemptSend, delay);
         } else {
           console.error("Max retries reached. Message failed.");
-          callback(null);
+          callback(null); // Call the callback with null to indicate failure
         }
       } else {
         callback(response);
@@ -69,6 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function updateStepList() {
   const stepList = document.getElementById("stepList");
   
+  // Only update new steps
   const currentStepCount = stepList.children.length;
   const fragment = document.createDocumentFragment();
 
@@ -77,6 +78,7 @@ function updateStepList() {
     const stepElement = createStepElement(step, i);
     fragment.appendChild(stepElement);
 
+    // Process the screenshot and update the image asynchronously
     processScreenshot(step).then(processedScreenshot => {
       const img = stepElement.querySelector('img');
       img.src = processedScreenshot;
@@ -91,56 +93,82 @@ function createStepElement(step, index) {
   stepElement.className = "step";
 
   const img = document.createElement("img");
-  img.src = step.screenshot;
+  img.src = step.screenshot; // Display the screenshot immediately
   img.alt = `Step ${index + 1} screenshot`;
   stepElement.appendChild(img);
 
   const info = document.createElement("div");
   info.className = "step-info";
-  info.textContent = `Step ${index + 1}: Click at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
+  if (step.type === 'iframeInteraction') {
+    info.textContent = `Step ${index + 1}: Iframe interaction at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
+  } else {
+    info.textContent = `Step ${index + 1}: ${step.type} at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
+  }
   stepElement.appendChild(info);
 
   return stepElement;
+}
+
+function addRedCircle(img, step) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = img.width;
+  canvas.height = img.height;
+
+  const scaleX = img.width / step.viewportWidth;
+  const scaleY = img.height / step.viewportHeight;
+
+  let x, y;
+  if (step.type === 'iframeInteraction') {
+    x = (step.iframePosition.x + step.x - step.scrollX) * scaleX;
+    y = (step.iframePosition.y + step.y - step.scrollY) * scaleY;
+  } else {
+    x = (step.x - step.scrollX) * scaleX;
+    y = (step.y - step.scrollY) * scaleY;
+  }
+
+  // Zoom parameters
+  const zoomFactor = 1.5; // Adjust this value to change the zoom level
+  const zoomedWidth = canvas.width / zoomFactor;
+  const zoomedHeight = canvas.height / zoomFactor;
+
+  // Calculate the top-left corner of the zoomed area
+  let sx = x - zoomedWidth / 2;
+  let sy = y - zoomedHeight / 2;
+
+  // Adjust if the zoomed area goes out of bounds
+  sx = Math.max(0, Math.min(sx, img.width - zoomedWidth));
+  sy = Math.max(0, Math.min(sy, img.height - zoomedHeight));
+
+  // Draw the zoomed image
+  ctx.drawImage(img, sx, sy, zoomedWidth, zoomedHeight, 0, 0, canvas.width, canvas.height);
+
+  // Recalculate the circle position based on the zoom
+  const circleX = (x - sx) * (canvas.width / zoomedWidth);
+  const circleY = (y - sy) * (canvas.height / zoomedHeight);
+
+  // Ensure the circle is always visible
+  const circleRadius = 20;
+  const adjustedCircleX = Math.max(circleRadius, Math.min(circleX, canvas.width - circleRadius));
+  const adjustedCircleY = Math.max(circleRadius, Math.min(circleY, canvas.height - circleRadius));
+
+  // Draw the red circle
+  ctx.beginPath();
+  ctx.arc(adjustedCircleX, adjustedCircleY, circleRadius, 0, 2 * Math.PI);
+  ctx.strokeStyle = "red";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  return canvas.toDataURL();
 }
 
 function processScreenshot(step) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      // Calculate the dimensions of the viewport without scrollbars
-      const scrollbarWidth = 17; // Assuming a typical scrollbar width
-      const viewportWidth = step.viewportWidth - (step.viewportHeight < img.height ? scrollbarWidth : 0);
-      const viewportHeight = step.viewportHeight - (step.viewportWidth < img.width ? scrollbarWidth : 0);
-
-      // Set canvas size to the viewport size
-      canvas.width = viewportWidth;
-      canvas.height = viewportHeight;
-
-      // Calculate the scale factors
-      const scaleX = img.width / step.viewportWidth;
-      const scaleY = img.height / step.viewportHeight;
-
-      // Draw the cropped image
-      ctx.drawImage(
-        img,
-        0, 0, viewportWidth * scaleX, viewportHeight * scaleY,  // Source rectangle
-        0, 0, viewportWidth, viewportHeight  // Destination rectangle
-      );
-
-      // Draw the click indicator
-      const circleX = step.x * (viewportWidth / step.viewportWidth);
-      const circleY = step.y * (viewportHeight / step.viewportHeight);
-
-      ctx.beginPath();
-      ctx.arc(circleX, circleY, 10, 0, 2 * Math.PI);
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      resolve(canvas.toDataURL());
+      const processedScreenshot = addRedCircle(img, step);
+      resolve(processedScreenshot);
     };
     img.src = step.screenshot;
   });
@@ -164,4 +192,5 @@ function updateUI() {
   });
 }
 
+// Initialize the side panel
 updateUI();
