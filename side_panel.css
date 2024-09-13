@@ -65,9 +65,9 @@ button:hover {
 }
 
 .step-info {
-  font-size: 13px;
-  color: #555;
-  line-height: 1.4;
+  font-size: 17px;
+  color: #555b63;
+  line-height: 1.5;
 }
 
 /* Scrollbar styling */

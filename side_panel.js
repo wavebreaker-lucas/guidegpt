@@ -68,13 +68,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function updateStepList() {
   const stepList = document.getElementById("stepList");
-  
+
   // Only update new steps
   const currentStepCount = stepList.children.length;
   const fragment = document.createDocumentFragment();
+  //for creating a first step which mention the website in
+  //TODO web tab change step add (with TextStep Element)
 
   for (let i = currentStepCount; i < steps.length; i++) {
     const step = steps[i];
+
+    if (currentStepCount === 0) {
+      const firstStep = step;
+      const firstElement = createFirstStepElement(firstStep,i);
+      fragment.appendChild(firstElement);
+    }
     const stepElement = createStepElement(step, i);
     fragment.appendChild(stepElement);
 
@@ -83,27 +91,63 @@ function updateStepList() {
       const img = stepElement.querySelector('img');
       img.src = processedScreenshot;
     });
+    
   }
 
   stepList.appendChild(fragment);
 }
 
+function createFirstStepElement(step, index) {
+  const stepElement = document.createElement("div");
+  stepElement.className = "step";
+  const info = document.createElement("div");
+  info.className = "step-info";
+
+  info.textContent = `Step ${index} : Navigate to ${new URL(step.url).hostname}`;
+
+  stepElement.appendChild(info);
+
+  return stepElement;
+}
+//For creating the first step instruction: navigated to ... website
+
+
 function createStepElement(step, index) {
   const stepElement = document.createElement("div");
   stepElement.className = "step";
 
-  const img = document.createElement("img");
-  img.src = step.screenshot; // Display the screenshot immediately
-  img.alt = `Step ${index + 1} screenshot`;
-  stepElement.appendChild(img);
+
+  function imageCreate() {
+    const img = document.createElement("img");
+    img.src = step.screenshot; // Display the screenshot immediately
+    img.alt = `Step ${index + 1} screenshot`;
+    stepElement.appendChild(img);
+  }
 
   const info = document.createElement("div");
   info.className = "step-info";
+  var innerText = step.target['innerText'];
+  var updatedText = innerText.replace(/\n/g, ' ');
+
   if (step.type === 'iframeInteraction') {
+    imageCreate();
     info.textContent = `Step ${index + 1}: Iframe interaction at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
+  } else if (step.type === 'keypress') {
+    info.textContent = `Step ${index + 1}: Press ${updatedText}`;
   } else {
-    info.textContent = `Step ${index + 1}: ${step.type} at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
+    imageCreate();
+    if (step.target['tagName'] === 'HTML') {
+      info.textContent = `Step ${index + 1}: ${step.type} here `;
+    } else if (step.target['tagName'] === 'DIV') {
+      info.textContent = `Step ${index + 1}: ${step.type} here `;
+    } else if(updatedText ===""){
+      info.textContent = `Step ${index + 1}: Click here"`;
+    }
+    else {
+      info.textContent = `Step ${index + 1}: ${step.type} "${updatedText}"`;
+    }
   }
+
   stepElement.appendChild(info);
 
   return stepElement;
@@ -119,17 +163,20 @@ function addRedCircle(img, step) {
   const scaleX = img.width / step.viewportWidth;
   const scaleY = img.height / step.viewportHeight;
 
+  console.log('step`', step);
   let x, y;
+
   if (step.type === 'iframeInteraction') {
-    x = (step.iframePosition.x + step.x - step.scrollX) * scaleX;
-    y = (step.iframePosition.y + step.y - step.scrollY) * scaleY;
+    x = (step.iframePosition.x + step.pageX - step.scrollX) * scaleX;
+    y = (step.iframePosition.y + step.pageY - step.scrollY) * scaleY;
   } else {
-    x = (step.x - step.scrollX) * scaleX;
-    y = (step.y - step.scrollY) * scaleY;
+    x = (step.pageX - step.scrollX) * scaleX;
+    y = (step.pageY - step.scrollY) * scaleY;
+
   }
 
   // Zoom parameters
-  const zoomFactor = 1.5; // Adjust this value to change the zoom level
+  const zoomFactor = 4; // Adjust this value to change the zoom level
   const zoomedWidth = canvas.width / zoomFactor;
   const zoomedHeight = canvas.height / zoomFactor;
 
@@ -149,7 +196,7 @@ function addRedCircle(img, step) {
   const circleY = (y - sy) * (canvas.height / zoomedHeight);
 
   // Ensure the circle is always visible
-  const circleRadius = 20;
+  const circleRadius = 200;
   const adjustedCircleX = Math.max(circleRadius, Math.min(circleX, canvas.width - circleRadius));
   const adjustedCircleY = Math.max(circleRadius, Math.min(circleY, canvas.height - circleRadius));
 
@@ -157,7 +204,9 @@ function addRedCircle(img, step) {
   ctx.beginPath();
   ctx.arc(adjustedCircleX, adjustedCircleY, circleRadius, 0, 2 * Math.PI);
   ctx.strokeStyle = "red";
-  ctx.lineWidth = 3;
+  ctx.fillStyle = "rgba(255, 0, 0, 0.1)"; // Set the fill color (red with transparency)
+  ctx.fill();
+  ctx.lineWidth = 10;
   ctx.stroke();
 
   return canvas.toDataURL();
