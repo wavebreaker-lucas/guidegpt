@@ -69,8 +69,10 @@ function initializeContentScript() {
 
   document.addEventListener("click", handleClick, true);
   console.log("Click listener added");
-  document.addEventListener("keypress", handleKeypress, true);
-  console.log("Keypress listener added");
+  document.addEventListener("keydown", handleKeydown, true);
+  console.log("keydown listener added");
+  document.addEventListener("visibilitychange", handleVisibilitychangen);
+  console.log("visibilitychange added");
   setupIframeListeners();
   console.log("Iframe listeners set up");
 }
@@ -129,19 +131,40 @@ function handleIframeInteraction(event) {
   }
 }
 
-
 async function handleClick(event) {
   console.log("Click event detected");
   console.log("isRecording:", isRecording);
   console.log("isProcessingClick:", isProcessingClick);
-  
+
   if (!event.isTrusted || !isRecording || isProcessingClick || event.clientX === undefined || event.clientY === undefined) {
     console.log("Skipping this event.");
     return;
   }
-  
+
   console.log("Processing click");
   isProcessingClick = true;
+
+  // Add a "welcome" step if this is the first step
+  if (steps.length === 0) {
+    const welcomeStep = {
+      type: 'welcome',
+      timestamp: new Date().toISOString(),
+      message: 'Welcome to the recording session!',
+      url: window.location.href
+    };
+
+    await new Promise((resolve, reject) => {
+      sendMessageWithRetry({ action: "addStep", step: welcomeStep }, (response) => {
+        console.log("Welcome step added:", response);
+        if (response.error) {
+          console.error("Error adding welcome step:", response.error);
+          reject(response.error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
 
   const isLink = event.target && (event.target.tagName === 'A' || event.target.closest('a'));
   let targetHref = '';
@@ -179,7 +202,7 @@ async function handleClick(event) {
 
   try {
     await new Promise((resolve, reject) => {
-      sendMessageWithRetry({ 
+      sendMessageWithRetry({
         action: "captureVisibleTab"
       }, (response) => {
         console.log("Capture response:", response);
@@ -204,6 +227,7 @@ async function handleClick(event) {
           console.error("Error adding step:", addStepResponse.error);
           reject(addStepResponse.error);
         } else {
+          steps.push(step); // Add step to the list
           console.log("Step added successfully with screenshot");
           resolve();
         }
@@ -221,16 +245,16 @@ async function handleClick(event) {
   }
 }
 
-async function handleKeypress(event) {
-  console.log("Keypress event detected");
+async function handleKeydown(event) {
+  console.log("Keydown event detected");
   console.log("isRecording:", isRecording);
   console.log("isProcessingPress:", isProcessingPress);
-  
+
   if (!event.isTrusted || !isRecording) {
     console.log("Skipping this event.");
     return;
   }
-  
+
   console.log("Processing Keypress");
   isProcessingPress = true;
 
@@ -242,26 +266,40 @@ async function handleKeypress(event) {
     targetHref = linkElement ? linkElement.href : '';
   }
 
+  console.log('keydown', event);
+
   const step = {
-    type: 'keypress',
-    x: event.clientX,
-    y: event.clientY,
-    scrollX: window.scrollX,
-    scrollY: window.scrollY,
-    pageX: event.pageX,
-    pageY: event.pageY,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    devicePixelRatio: window.devicePixelRatio,
-    timestamp: new Date().toISOString(),
-    url: window.location.href,
+    type: 'keydown',
+    altKey: event.altKey,
+    bubbles: event.bubbles,
+    cancelable: event.cancelable,
+    cancelBubble: event.cancelBubble,
+    charCode: event.charCode,
+    code: event.code,
+    composed: event.composed,
+    ctrlKey: event.ctrlKey,
+    currentTarget: event.currentTarget,
+    defaultPrevented: event.defaultPrevented,
+    detail: event.detail,
+    eventPhase: event.eventPhase,
+    isComposing: event.isComposing,
+    isTrusted: event.isTrusted,
+    key: event.key,
     target: event.target ? {
       tagName: event.target.tagName || '',
       id: event.target.id || '',
       className: event.target.className || '',
-      innerText: event.code || '',
+      innerText: event.target.innerText || '',
       href: targetHref
-    } : {}
+    } : {},
+    timestamp: new Date().toISOString(),
+    url: window.location.href,
+    keyCode: event.keyCode,
+    location: event.location,
+    metaKey: event.metaKey,
+    repeat: event.repeat,
+    returnValue: event.returnValue,
+    shiftKey: event.shiftKey,
   };
 
   console.log("Step details:", step);
@@ -269,25 +307,6 @@ async function handleKeypress(event) {
   document.body.style.pointerEvents = 'none';
 
   try {
-    await new Promise((resolve, reject) => {
-      sendMessageWithRetry({ 
-        action: "captureVisibleTab"
-      }, (response) => {
-        console.log("Capture response:", response);
-        if (response.error) {
-          console.error("Error capturing screenshot:", response.error);
-          reject(response.error);
-        } else if (!response.dataUrl) {
-          console.error("Screenshot capture failed: No dataUrl received");
-          reject(new Error("No screenshot data received"));
-        } else {
-          step.screenshot = response.dataUrl;
-          console.log("Screenshot captured successfully");
-          resolve();
-        }
-      });
-    });
-
     await new Promise((resolve, reject) => {
       sendMessageWithRetry({ action: "addStep", step: step }, (addStepResponse) => {
         console.log("Add step response:", addStepResponse);
@@ -308,6 +327,72 @@ async function handleKeypress(event) {
     isProcessingPress = false;
     if (isLink && targetHref) {
       window.location.href = targetHref;
+    }
+  }
+}
+
+
+async function handleVisibilitychangen(event) {
+
+  if (event.target.visibilityState === 'visible' && event.target.cookie !== '') {
+    
+    console.log('EVENTLOG',event);
+    console.log('EVENTLOG',document.title);
+
+    console.log("visibilitychange event detected");
+    console.log("isRecording:", isRecording);
+    console.log("isProcessingPress:", isProcessingPress);
+
+    if (!event.isTrusted || !isRecording) {
+      console.log("Skipping this event.");
+      return;
+    }
+
+    console.log("Processing visibilitychange");
+    isProcessingPress = true;
+
+    console.log('visibilitychange', event);
+
+    const step = {
+      type: 'visibilitychange',
+      title: document.title,
+      timestamp: new Date().toISOString(),
+      url: event.srcElement.baseURI,
+      composed: event.composed,
+      currentTarget: event.currentTarget,
+      defaultPrevented: event.defaultPrevented,
+      eventPhase: event.eventPhase,
+      isTrusted: event.isTrusted,
+      returnValue: event.returnValue,
+      target: event.target ? {
+        tagName: event.target.tagName || '',
+        id: event.target.id || '',
+        className: event.target.className || '',
+        innerText: event.target.innerText || '',
+      } : {},
+    };
+
+    console.log("Step details:", step);
+
+    try {
+      await new Promise((resolve, reject) => {
+        sendMessageWithRetry({ action: "addStep", step: step }, (addStepResponse) => {
+          console.log("Add step response:", addStepResponse);
+          if (addStepResponse.error) {
+            console.error("Error adding step:", addStepResponse.error);
+            reject(addStepResponse.error);
+          } else {
+            console.log("Step added successfully with screenshot");
+            resolve();
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error("Error processing click or capturing screenshot:", error);
+    } finally {
+      document.body.style.pointerEvents = '';
+      isProcessingPress = false;
     }
   }
 }

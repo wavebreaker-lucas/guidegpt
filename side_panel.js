@@ -79,21 +79,15 @@ function updateStepList() {
     const step = steps[i];
 
     if (currentStepCount === 0) {
+      const firstFragment = document.createDocumentFragment();
       const firstStep = step;
-      const firstElement = createFirstStepElement(firstStep,i);
-      fragment.appendChild(firstElement);
+      const firstElement = createFirstStepElement(firstStep, i);
+      firstFragment.appendChild(firstElement);
+      stepList.appendChild(firstFragment);
     }
     const stepElement = createStepElement(step, i);
     fragment.appendChild(stepElement);
-
-    // Process the screenshot and update the image asynchronously
-    processScreenshot(step).then(processedScreenshot => {
-      const img = stepElement.querySelector('img');
-      img.src = processedScreenshot;
-    });
-    
   }
-
   stepList.appendChild(fragment);
 }
 
@@ -103,7 +97,7 @@ function createFirstStepElement(step, index) {
   const info = document.createElement("div");
   info.className = "step-info";
 
-  info.textContent = `Step ${index} : Navigate to ${new URL(step.url).hostname}`;
+  info.textContent = `Step ${index + 1} : Navigate to ${new URL(step.url)}`;
 
   stepElement.appendChild(info);
 
@@ -122,30 +116,42 @@ function createStepElement(step, index) {
     img.src = step.screenshot; // Display the screenshot immediately
     img.alt = `Step ${index + 1} screenshot`;
     stepElement.appendChild(img);
+    // Process the screenshot and update the image asynchronously
+    processScreenshot(step).then(processedScreenshot => {
+      const img = stepElement.querySelector('img');
+      img.src = processedScreenshot;
+    });
   }
 
   const info = document.createElement("div");
   info.className = "step-info";
   var innerText = step.target['innerText'];
   var updatedText = innerText.replace(/\n/g, ' ');
-
+  
   if (step.type === 'iframeInteraction') {
     imageCreate();
     info.textContent = `Step ${index + 1}: Iframe interaction at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
-  } else if (step.type === 'keypress') {
-    info.textContent = `Step ${index + 1}: Press ${updatedText}`;
+  } else if (step.type === 'keydown') {
+    info.textContent = `Step ${index + 1}: Press ${step.key}`;
+  } else if (step.type === 'visibilitychange') {
+    info.textContent = `Step ${index + 1}: Press Tab {${step.title}}`;
   } else {
     imageCreate();
     if (step.target['tagName'] === 'HTML') {
       info.textContent = `Step ${index + 1}: ${step.type} here `;
     } else if (step.target['tagName'] === 'DIV') {
       info.textContent = `Step ${index + 1}: ${step.type} here `;
-    } else if(updatedText ===""){
+    } else if (updatedText === "") {
       info.textContent = `Step ${index + 1}: Click here"`;
     }
     else {
       info.textContent = `Step ${index + 1}: ${step.type} "${updatedText}"`;
     }
+      // Process the screenshot and update the image asynchronously
+      processScreenshot(step).then(processedScreenshot => {
+        const img = stepElement.querySelector('img');
+        img.src = processedScreenshot;
+      });
   }
 
   stepElement.appendChild(info);
