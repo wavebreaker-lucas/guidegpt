@@ -1,8 +1,12 @@
 let steps = [];
+let startRecord = false;
 let isRecording = false;
+let isPausing = false;
 
 document.getElementById("startRecording").addEventListener("click", startRecording);
-document.getElementById("stopRecording").addEventListener("click", stopRecording);
+document.getElementById("finishRecording").addEventListener("click", finishRecording);
+document.getElementById("pauseRecording").addEventListener("click", pauseRecording);
+document.getElementById("continueRecording").addEventListener("click", continueRecording);
 
 function sendMessageIfValid(message, callback) {
   if (chrome.runtime && chrome.runtime.id) {
@@ -38,6 +42,7 @@ function sendMessageWithRetry(message, callback, maxRetries = 3, delay = 1000) {
 function startRecording() {
   sendMessageWithRetry({ action: "setRecordingState", isRecording: true }, (response) => {
     if (response !== null) {
+      startRecord = true;
       isRecording = true;
       updateUI();
     } else {
@@ -46,11 +51,45 @@ function startRecording() {
   });
 }
 
-function stopRecording() {
+function pauseRecording() {
   sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
     if (response !== null) {
       isRecording = false;
+      isPausing = true;
       updateUI();
+    } else {
+      console.error("Failed to stop recording");
+    }
+  });
+}
+
+function continueRecording() {
+  sendMessageWithRetry({ action: "setRecordingState", isRecording: true }, (response) => {
+    if (response !== null) {
+      isRecording = true;
+      isPausing = false;
+      updateUI();
+    } else {
+      console.error("Failed to stop recording");
+    }
+  });
+}
+
+function finishRecording() {
+  sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
+    if (response !== null) {
+      isRecording = false;
+      startRecord = false;
+      isPausing = false;
+      chrome.tabs.update({
+        url: "http://www.example.com/"
+      });
+      // navigate to the target page
+      steps = [];
+      chrome.runtime.reload();
+      // clean the cache of extension
+      window.close();
+      //close the window
     } else {
       console.error("Failed to stop recording");
     }
@@ -127,7 +166,7 @@ function createStepElement(step, index) {
   info.className = "step-info";
   var innerText = step.target['innerText'];
   var updatedText = innerText.replace(/\n/g, ' ');
-  
+
   if (step.type === 'iframeInteraction') {
     imageCreate();
     info.textContent = `Step ${index + 1}: Iframe interaction at (${step.x}, ${step.y}) - ${new URL(step.url).hostname}`;
@@ -147,11 +186,11 @@ function createStepElement(step, index) {
     else {
       info.textContent = `Step ${index + 1}: ${step.type} "${updatedText}"`;
     }
-      // Process the screenshot and update the image asynchronously
-      processScreenshot(step).then(processedScreenshot => {
-        const img = stepElement.querySelector('img');
-        img.src = processedScreenshot;
-      });
+    // Process the screenshot and update the image asynchronously
+    processScreenshot(step).then(processedScreenshot => {
+      const img = stepElement.querySelector('img');
+      img.src = processedScreenshot;
+    });
   }
 
   stepElement.appendChild(info);
@@ -228,10 +267,12 @@ function processScreenshot(step) {
     img.src = step.screenshot;
   });
 }
-
+startRecord, isRecording, isPausing
 function updateRecordingUI() {
-  document.getElementById("startRecording").style.display = isRecording ? "none" : "block";
-  document.getElementById("stopRecording").style.display = isRecording ? "block" : "none";
+  document.getElementById("startRecording").style.display = !startRecord && !isRecording ? "block" : "none";
+  document.getElementById("finishRecording").style.display = startRecord ? "block" : "none";
+  document.getElementById("pauseRecording").style.display = startRecord && isRecording && !isPausing ? "block" : "none";
+  document.getElementById("continueRecording").style.display = startRecord && !isRecording && isPausing ? "block" : "none";
 }
 
 function updateUI() {
