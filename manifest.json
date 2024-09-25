@@ -25,7 +25,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["side_panel.html", "side_panel.js", "side_panel.css"],
+      "resources": ["side_panel.html", "side_panel.js", "side_panel.css", "recorded_step.html"],
       "matches": ["<all_urls>"]
     }
   ],

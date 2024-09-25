@@ -75,21 +75,39 @@ function continueRecording() {
   });
 }
 
-function finishRecording() {
+
+async function toMongoDB(steps) {
+  // Send data to the server
+  try {
+    const response = await fetch('http://localhost:3000/finish-recording', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ steps })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Network response was not ok: ${errorText}`);
+    }
+
+    console.log('Data successfully sent to server');
+  } catch (error) {
+    console.error('Failed to send data to server:', error);
+  }
+}
+
+async function finishRecording() {
   sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
     if (response !== null) {
-      isRecording = false;
-      startRecord = false;
-      isPausing = false;
-      chrome.tabs.update({
-        url: "http://www.example.com/"
+      const stepsData = encodeURIComponent(JSON.stringify(steps));
+      const newUrl = `recorded_step.html?data=${stepsData}`;
+      chrome.tabs.create({ url: newUrl }, () => {
+        isRecording=false;
+        isPausing=false;
       });
-      // navigate to the target page
-      steps = [];
-      chrome.runtime.reload();
-      // clean the cache of extension
       window.close();
-      //close the window
     } else {
       console.error("Failed to stop recording");
     }
@@ -117,7 +135,7 @@ function updateStepList() {
   for (let i = currentStepCount; i < steps.length; i++) {
     const step = steps[i];
 
-    if (currentStepCount === 0) {
+    if (currentStepCount === 0 && isRecording) {
       const firstFragment = document.createDocumentFragment();
       const firstStep = step;
       const firstElement = createFirstStepElement(firstStep, i);
