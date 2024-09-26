@@ -4,26 +4,133 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Steps Display</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #2c3e50;
+            --background-color: #f7f9fc;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-size: 1.2em; /* Enlarge the body text */
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.8;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 60px 20px;
         }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--secondary-color);
+            margin-bottom: 50px;
+            font-size: 3em;
+            font-weight: 600;
+            letter-spacing: -1px;
+        }
+
         .step {
-            margin-bottom: 30px;
-            border: 2px solid #ccc;
-            padding: 15px;
-            font-size: 1.2em; /* Enlarge text within steps */
+            background-color: var(--card-background);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            margin-bottom: 40px;
+            padding: 35px;
+            font-size: 1.1em;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
+            border: 1px solid var(--border-color);
         }
+
+        .step:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px var(--shadow-color);
+        }
+
+        .step::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background-color: var(--primary-color);
+            border-top-left-radius: 16px;
+            border-bottom-left-radius: 16px;
+        }
+
+        .step-number {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-number::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            margin-right: 12px;
+        }
+
+        .step-content {
+            margin-bottom: 25px;
+            line-height: 1.9;
+            color: #4a4a4a;
+        }
+
         canvas {
-            border: 2px solid #ccc;
-            max-width: 70%; /* Enlarge the screenshot */
+            display: block;
+            max-width: 100%;
             height: auto;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px var(--shadow-color);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        canvas:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 40px 15px;
+            }
+            .step {
+                padding: 25px;
+            }
+            h1 {
+                font-size: 2.5em;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Recorded Steps</h1>
-    <div id="stepsContainer"></div>
+    <div class="container">
+        <h1>Recorded Steps</h1>
+        <div id="stepsContainer"></div>
+    </div>
 
     <script src="step.js"></script>
 </body>
