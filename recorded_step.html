@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steps Display</title>
+    <title>How to create a spreadsheet in Notion</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -14,6 +14,7 @@
             --text-color: #333333;
             --shadow-color: rgba(0, 0, 0, 0.1);
             --border-color: #e0e0e0;
+            --summary-background: #e8f4ff;
         }
         *{
             margin: 0;
@@ -34,22 +35,13 @@
             margin: 0 auto;
         }
 
-        h1 {
-            text-align: center;
-            color: var(--secondary-color);
-            margin-bottom: 50px;
-            font-size: 3em;
-            font-weight: 600;
-            letter-spacing: -1px;
-        }
-
         .step {
             background-color: var(--card-background);
             border-radius: 16px;
             box-shadow: 0 10px 30px var(--shadow-color);
             margin-bottom: 40px;
             padding: 35px;
-            font-size: 1.1em;
+            font-size: 1.2em;
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             position: relative;
             border: 1px solid var(--border-color);
@@ -76,7 +68,7 @@
             font-weight: 600;
             color: var(--primary-color);
             margin-bottom: 20px;
-            font-size: 1.3em;
+            font-size: 1.4em;
             display: flex;
             align-items: center;
         }
@@ -92,7 +84,7 @@
         }
 
         .step-content {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             line-height: 1.9;
             color: #4a4a4a;
         }
@@ -105,6 +97,7 @@
             box-shadow: 0 5px 15px var(--shadow-color);
             transition: all 0.3s ease;
             border: 1px solid var(--border-color);
+            margin-top: 25px; /* Added margin-top for spacing */
         }
 
         canvas:hover {
@@ -167,32 +160,111 @@
         .dropdown button:hover {
             background-color: var(--background-color);
         }
+
+        .summary-container {
+            background-color: var(--summary-background);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.05);
+            border: 2px solid var(--primary-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background-color: var(--primary-color);
+        }
+
+        .summary-content h1 {
+            font-size: 2.5em;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            letter-spacing: -1px;
+        }
+
+        .summary-content p {
+            color: var(--text-color);
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+
+        .summary-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            color: var(--secondary-color);
+            font-size: 0.95em;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .summary-meta > * {
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+
+        .tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 40px 15px;
             }
-            .step {
+            .step, .summary-container {
                 padding: 25px;
             }
-            h1 {
-                font-size: 2.5em;
+            .summary-content h1 {
+                font-size: 2em;
+            }
+            .summary-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .summary-meta > * {
+                margin-bottom: 10px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Recorded Steps</h1>
+        <div class="summary-container">
+            <div class="summary-content">
+                <h1>How to create a spreadsheet in Notion</h1>
+                <div class="summary-meta">
+                    <span><strong>Author:</strong> KW Cheung</span>
+                    <span><strong>Steps:</strong> 5</span>
+                    <span><strong>Duration:</strong> 15 seconds</span>
+                    <span class="tag">Notion</span>
+                </div>
+            </div>
+        </div>
+
         <div id="stepsContainer"></div>
     </div>
 
     <button class="export-button" id="exportButton">Export</button>
     <div class="dropdown" id="exportDropdown">
-        <button id="exportToPDF">To PDF</button>
-        <button id="exportToPNG">To PNG</button>
-        <button id="exportToDOCX">To DOCX</button>
-        <button id="exportToGD">To Google Drive</button>
-        <button id="exportToHTML">To HTML</button>
+        <button id="exportToPDF">as PDF</button>
+        <button id="exportToDOCX">as DOCX</button>
+        <button id="exportToGD">to Google Drive</button>
+        <button id="exportToNOT">to Notion</button>
+        <button id="exportToGIT">to Gitbook</button>
     </div>
 
     <script src="step.js"></script>
