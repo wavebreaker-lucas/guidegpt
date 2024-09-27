@@ -15,7 +15,7 @@
             --shadow-color: rgba(0, 0, 0, 0.1);
             --border-color: #e0e0e0;
             --summary-background: #e8f4ff;
-        }
+      }
         *{
             margin: 0;
             padding: 0;
@@ -34,7 +34,6 @@
             max-width: 900px;
             margin: 0 auto;
         }
-
         .step {
             background-color: var(--card-background);
             border-radius: 16px;
@@ -52,35 +51,34 @@
             box-shadow: 0 15px 40px var(--shadow-color);
         }
 
-        .step::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6px;
-            height: 100%;
-            background-color: var(--primary-color);
-            border-top-left-radius: 16px;
-            border-bottom-left-radius: 16px;
-        }
-
         .step-number {
             font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 20px;
-            font-size: 1.4em;
-            display: flex;
-            align-items: center;
+            color: #fff;
+            background-color: var(--primary-color);
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            margin-right: 10px;
+            font-size: 1.2em;
         }
 
-        .step-number::before {
-            content: '';
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background-color: var(--primary-color);
-            border-radius: 50%;
-            margin-right: 12px;
+        .step-url {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--summary-background);
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .step-url::before {
+            content: '🔗';
+            margin-right: 5px;
         }
 
         .step-content {
@@ -105,21 +103,58 @@
             box-shadow: 0 8px 25px var(--shadow-color);
         }
 
-        .edit-button {
+        .pen-button {
             display: none;
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 5px;
+            right: 5px;
             background-color: var(--primary-color);
             color: #fff;
             border: none;
+            padding: 5px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .edit-button {
+            display: none;
+            position: absolute;
+            top: 25px;
+            right: 50px;
+            background-color: var(--primary-color);
+            color: #fff;
             padding: 5px 10px;
             border-radius: 5px;
             cursor: pointer;
+            z-index: 10;
         }
 
-        .step:hover .edit-button {
+        .step:hover .edit-button{
             display: block;
+        }
+
+        .edit-dropdown {
+            display: none;
+            position: absolute;
+            top: 30px;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 5px 15px var(--shadow-color);
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 20;
+        }
+
+        .edit-dropdown div {
+            padding: 10px;
+            cursor: pointer;
+            text-align: left;
+            color: var(--text-color);
+        }
+
+        .edit-dropdown div:hover {
+            background-color: var(--background-color);
         }
 
         .export-button {
@@ -148,12 +183,13 @@
         }
 
         .dropdown button {
+            text-align: center;
+            display:flow-root;
             width: 100%;
             padding: 10px;
             background-color: var(--card-background);
             border: none;
             cursor: pointer;
-            text-align: left;
             color: var(--text-color);
         }
 

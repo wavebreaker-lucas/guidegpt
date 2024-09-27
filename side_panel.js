@@ -100,17 +100,21 @@ async function toMongoDB(steps) {
 
 async function finishRecording() {
   sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
-    if (response !== null) {
-      const stepsData = encodeURIComponent(JSON.stringify(steps));
-      const newUrl = `recorded_step.html?data=${stepsData}`;
-      chrome.tabs.create({ url: newUrl }, () => {
-        isRecording=false;
-        isPausing=false;
-      });
-      window.close();
-    } else {
-      console.error("Failed to stop recording");
-    }
+      if (response !== null) {
+          const stepsData = steps.map(step => ({
+              ...step,
+              coordinates: step.coordinates || { x: 0, y: 0 } // Default if not present
+          }));
+          const encodedStepsData = encodeURIComponent(JSON.stringify(stepsData));
+          const newUrl = `recorded_step.html?data=${encodedStepsData}`;
+          chrome.tabs.create({ url: newUrl }, () => {
+              isRecording = false;
+              isPausing = false;
+          });
+          window.close();
+      } else {
+          console.error("Failed to stop recording");
+      }
   });
 }
 
@@ -146,7 +150,6 @@ function updateStepList() {
     fragment.appendChild(stepElement);
   }
   stepList.appendChild(fragment);
-  // Scroll to the bottom
   stepList.scrollTop = stepList.scrollHeight;
 }
 
@@ -274,17 +277,21 @@ function addRedCircle(img, step) {
   ctx.lineWidth = 10;
   ctx.stroke();
 
-  return canvas.toDataURL();
+  return {
+    processedImage: canvas.toDataURL(),
+    coordinates: { x, y }
+};
 }
 
 function processScreenshot(step) {
   return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const processedScreenshot = addRedCircle(img, step);
-      resolve(processedScreenshot);
-    };
-    img.src = step.screenshot;
+      const img = new Image();
+      img.onload = () => {
+          const { processedImage, coordinates } = addRedCircle(img, step);
+          step.coordinates = coordinates; // Store the coordinates in the step
+          resolve(processedImage);
+      };
+      img.src = step.screenshot;
   });
 }
 startRecord, isRecording, isPausing

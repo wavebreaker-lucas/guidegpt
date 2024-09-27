@@ -7,8 +7,30 @@ function displaySteps(steps) {
         const stepElement = document.createElement('div');
         stepElement.className = 'step';
 
+        const stepNumber = document.createElement('span');
+        stepNumber.className = 'step-number';
+        stepNumber.textContent = index + 1;
+
         const textElement = document.createElement('p');
-        textElement.textContent = `Step ${index + 1}: ${step.type} at ${step.url}`;
+        textElement.style.display = 'inline';
+        stepElement.appendChild(stepNumber);
+        textElement.innerHTML += `${step.type} at `;
+
+        if (index == 0) {
+            const stepUrl = document.createElement('span');
+            stepUrl.className = 'step-url';
+            stepUrl.textContent = step.url;
+
+            textElement.appendChild(stepUrl);
+        } else {
+            
+            var oriText = step.target.innerText;
+            var updatedText = oriText.replace(/\n/g, ' ');
+            const innerText = document.createElement('span');
+            innerText.textContent = updatedText;
+            textElement.appendChild(innerText);
+        }
+
         textElement.ondblclick = () => {
             textElement.contentEditable = true;
             textElement.focus();
@@ -27,54 +49,20 @@ function displaySteps(steps) {
                 const [canvas, coordinates, enableDragging] = createCanvasWithCircle(img, step);
                 stepElement.appendChild(canvas);
                 stepElement.appendChild(coordinates);
-
-                const editButton = document.createElement('button');
-                editButton.className = 'edit-button';
-                editButton.textContent = 'Edit Screenshot';
-                editButton.style.position = 'absolute';
-                editButton.style.top = '10px';
-                editButton.style.right = '10px';
-                editButton.onclick = () => {
-                    console.log('draggable',draggable);
-                    if(draggable){
-                        draggable = false;
-                        editButton.textContent = 'Edit Screenshot';
-                    }else{
-                        draggable = true;
-                        editButton.textContent = 'Done';
-                        enableDragging();
-                    }
-                };
-                stepElement.appendChild(editButton);
             };
         }
+
+        const editButton = createEditButton();
+        stepElement.appendChild(editButton);
 
         stepsContainer.appendChild(stepElement);
     });
 }
 
-
-document.addEventListener('DOMContentLoaded', getStepsFromUrl);
-document.getElementById('exportButton').addEventListener('click', toggleDropdown);
-document.getElementById('exportToPNG').addEventListener('click', () => exportTo('PNG'));
-document.getElementById('exportToPDF').addEventListener('click', () => exportTo('PDF'));
-document.getElementById('exportToGD').addEventListener('click', () => exportTo('Google Drive'));
-document.getElementById('exportToDOCX').addEventListener('click', () => exportTo('DOCX'));
-document.getElementById('exportToHTML').addEventListener('click', () => exportTo('HTML'));
-
-
-function toggleDropdown() {
-    const dropdown = document.getElementById('exportDropdown');
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-}
-
-function exportTo(format) {
-    alert(`Exporting to ${format}`);
-    const dropdown = document.getElementById('exportDropdown');
-    dropdown.style.display = 'none';
-}
-
 function createCanvasWithCircle(img, step) {
+    const canvasWrapper = document.createElement('div');
+    canvasWrapper.style.position = 'relative';
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -82,8 +70,18 @@ function createCanvasWithCircle(img, step) {
     canvas.height = img.height;
     canvas.style.width = '100%';
 
-    let circleX = 150;
-    let circleY = 150;
+    const scaleX = img.width / step.viewportWidth;
+    const scaleY = img.height / step.viewportHeight;
+
+    let circleX, circleY;
+    if (step.type === 'iframeInteraction') {
+        circleX = (step.iframePosition.x + step.pageX - step.scrollX) * scaleX;
+        circleY = (step.iframePosition.y + step.pageY - step.scrollY) * scaleY;
+    } else {
+        circleX = (step.pageX - step.scrollX) * scaleX;
+        circleY = (step.pageY - step.scrollY) * scaleY;
+    }
+
     const circleRadius = 50;
 
     const coordinates = document.createElement('p');
@@ -147,14 +145,81 @@ function createCanvasWithCircle(img, step) {
 
     draw();
 
+    const penButton = document.createElement('button');
+    penButton.className = 'pen-button';
+    penButton.innerHTML = '✏️';
+    penButton.onclick = () => {
+        if (draggable) {
+            draggable = false;
+            penButton.innerHTML = '✏️';
+        } else {
+            draggable = true;
+            penButton.innerHTML = '✔️';
+            enableDragging();
+        }
+    };
+    canvasWrapper.appendChild(canvas);
+    canvasWrapper.appendChild(penButton);
+
+    canvasWrapper.addEventListener('mouseenter', () => {
+        penButton.style.display = 'block';
+    });
+
+    canvasWrapper.addEventListener('mouseleave', () => {
+        penButton.style.display = 'none';
+    });
+
     function enableDragging() {
         draggable = true;
         setTimeout(() => {
             draggable = false;
-        }, 5000); // Draggable for 5 seconds after pressing "Edit"
+        }, 5000);
     }
 
-    return [canvas, coordinates, enableDragging];
+    return [canvasWrapper, coordinates, enableDragging];
+}
+
+function createEditButton() {
+    const editButton = document.createElement('div');
+    editButton.className = 'edit-button';
+    editButton.textContent = 'Edit';
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'edit-dropdown';
+
+    const options = ['Edit', 'Remove', 'Reorder', 'Blur'];
+    options.forEach(option => {
+        const optionElement = document.createElement('div');
+        optionElement.textContent = option;
+        optionElement.onclick = () => alert(`${option} clicked!`);
+        dropdown.appendChild(optionElement);
+    });
+
+    editButton.onclick = () => {
+        dropdown.style.display = dropdown.style.display === 'inline-flex' ? 'none' : 'inline-flex';
+    };
+
+    editButton.appendChild(dropdown);
+    return editButton;
+}
+
+document.addEventListener('DOMContentLoaded', getStepsFromUrl);
+document.getElementById('exportButton').addEventListener('click', toggleDropdown);
+document.getElementById('exportToNOT').addEventListener('click', () => exportTo('Notion'));
+document.getElementById('exportToPDF').addEventListener('click', () => exportTo('PDF'));
+document.getElementById('exportToGD').addEventListener('click', () => exportTo('Google Drive'));
+document.getElementById('exportToDOCX').addEventListener('click', () => exportTo('DOCX'));
+document.getElementById('exportToGIT').addEventListener('click', () => exportTo('Git'));
+
+function toggleDropdown() {
+    const dropdown = document.getElementById('exportDropdown');
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+function exportTo(format) {
+    alert(`Exporting to ${format}`);
+    const dropdown = document.getElementById('exportDropdown');
+    dropdown.style.display = 'none';
 }
 
 function getStepsFromUrl() {
