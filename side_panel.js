@@ -146,6 +146,8 @@ function updateStepList() {
     fragment.appendChild(stepElement);
   }
   stepList.appendChild(fragment);
+  // Scroll to the bottom
+  stepList.scrollTop = stepList.scrollHeight;
 }
 
 function createFirstStepElement(step, index) {
