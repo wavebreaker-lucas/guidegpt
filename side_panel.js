@@ -2,11 +2,34 @@ let steps = [];
 let startRecord = false;
 let isRecording = false;
 let isPausing = false;
+let isAuthenticated = false;
 
 document.getElementById("startRecording").addEventListener("click", startRecording);
 document.getElementById("finishRecording").addEventListener("click", finishRecording);
 document.getElementById("pauseRecording").addEventListener("click", pauseRecording);
 document.getElementById("continueRecording").addEventListener("click", continueRecording);
+document.getElementById("loginWithGoogle").addEventListener("click", loginWithGoogle);
+
+function loginWithGoogle() {
+  // Simulate Google login
+  isAuthenticated = true;
+  updateAuthUI(); // Update the UI after login
+}
+
+function updateAuthUI() {
+  if (isAuthenticated) {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("controls").style.display = "block";
+    document.getElementById("stepList").style.display = "block";
+    document.getElementById("exportOptions").style.display = "block";
+    updateRecordingUI();
+  } else {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("controls").style.display = "none";
+    document.getElementById("stepList").style.display = "none";
+    document.getElementById("exportOptions").style.display = "none";
+  }
+}
 
 function sendMessageIfValid(message, callback) {
   if (chrome.runtime && chrome.runtime.id) {
@@ -75,29 +98,6 @@ function continueRecording() {
   });
 }
 
-
-async function toMongoDB(steps) {
-  // Send data to the server
-  try {
-    const response = await fetch('http://localhost:3000/finish-recording', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ steps })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Network response was not ok: ${errorText}`);
-    }
-
-    console.log('Data successfully sent to server');
-  } catch (error) {
-    console.error('Failed to send data to server:', error);
-  }
-}
-
 async function finishRecording() {
   sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
       if (response !== null) {
@@ -138,6 +138,8 @@ function updateStepList() {
 
   for (let i = currentStepCount; i < steps.length; i++) {
     const step = steps[i];
+
+    console.log('steps[i]',steps[i]);
 
     if (currentStepCount === 0 && isRecording) {
       const firstFragment = document.createDocumentFragment();
@@ -303,6 +305,7 @@ function updateRecordingUI() {
 }
 
 function updateUI() {
+  if (isAuthenticated) {}
   sendMessageWithRetry({ action: "getState" }, (response) => {
     if (response !== null) {
       isRecording = response.isRecording;
@@ -316,4 +319,5 @@ function updateUI() {
 }
 
 // Initialize the side panel
+updateAuthUI();
 updateUI();

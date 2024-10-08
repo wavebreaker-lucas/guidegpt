@@ -1,9 +1,82 @@
+let displayedSteps = [];
 let isDragging = false;
 let draggable = false;
 
+document.getElementById('fetchDataButton').addEventListener('click', async () => {
+    try {
+        const project = createProjectData(); // Collects and structures the project data
+        const response = await fetch('https://us-central1-matapass-716cc.cloudfunctions.net/readFirestore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(project)
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        console.log('Project created successfully');
+    } catch (error) {
+        console.error('Error creating project:', error);
+    }
+});
+function createProjectData() {
+    console.log('displayedSteps', displayedSteps);
+    return {
+        id: 'unique-project-id',  // Generate or assign a unique ID
+        title: 'Project Title',
+        subtitle: 'Project Subtitle',
+        author: 'John Chong',
+        authorId: 'pK07huTGEJUMOylbMBmvZSuPYCu2',
+        steps: displayedSteps.map(step => (
+            step.type === 'click'
+                ? {
+                    stepType: step.type,
+                    targetUrl: step.url,
+                    screenshotUrl: step.screenshot,
+                    viewportWidth: step.viewportWidth,
+                    viewportHeight: step.viewportHeight,
+                    createdTime: step.timestamp,
+                    pageX: step.pageX,
+                    pageY: step.pageY,
+                    scrollX: step.scrollX,
+                    scrollY: step.scrollY,
+                    iframeX: step.x,
+                    iframeY: step.coordinates.y,
+                    innerText: step.target.innerText
+                } : step.type === 'Navigate' ?
+                    {
+                        stepType: step.type,
+                        targetUrl: step.url,
+                        createdTime: step.timestamp,
+                        innerText: step.message,
+                    } : {
+                        stepType: step.type,
+                        targetUrl: step.url,
+                        screenshotUrl: step.screenshot,
+                        viewportWidth: step.viewportWidth,
+                        viewportHeight: step.viewportHeight,
+                        createdTime: step.timestamp,
+                        pageX: step.pageX,
+                        pageY: step.pageY,
+                        scrollX: step.scrollX,
+                        scrollY: step.scrollY,
+                        iframeX: step.coordinates.x,
+                        iframeY: step.coordinates.y,
+                        innerText: step.target.innerText
+                    }
+        )),
+        createdTime: new Date().toISOString()
+    };
+}
+
 function displaySteps(steps) {
     const stepsContainer = document.getElementById('stepsContainer');
+    stepsContainer.innerHTML = ''; // Clear previous steps
     steps.forEach((step, index) => {
+        displayedSteps.push(step);
         const stepElement = document.createElement('div');
         stepElement.className = 'step';
 
@@ -20,14 +93,10 @@ function displaySteps(steps) {
             const stepUrl = document.createElement('span');
             stepUrl.className = 'step-url';
             stepUrl.textContent = step.url;
-
             textElement.appendChild(stepUrl);
         } else {
-            
-            var oriText = step.target.innerText;
-            var updatedText = oriText.replace(/\n/g, ' ');
             const innerText = document.createElement('span');
-            innerText.textContent = updatedText;
+            innerText.textContent = step.target.innerText.replace(/\n/g, ' ');
             textElement.appendChild(innerText);
         }
 
@@ -204,23 +273,6 @@ function createEditButton() {
 }
 
 document.addEventListener('DOMContentLoaded', getStepsFromUrl);
-document.getElementById('exportButton').addEventListener('click', toggleDropdown);
-document.getElementById('exportToNOT').addEventListener('click', () => exportTo('Notion'));
-document.getElementById('exportToPDF').addEventListener('click', () => exportTo('PDF'));
-document.getElementById('exportToGD').addEventListener('click', () => exportTo('Google Drive'));
-document.getElementById('exportToDOCX').addEventListener('click', () => exportTo('DOCX'));
-document.getElementById('exportToGIT').addEventListener('click', () => exportTo('Git'));
-
-function toggleDropdown() {
-    const dropdown = document.getElementById('exportDropdown');
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-}
-
-function exportTo(format) {
-    alert(`Exporting to ${format}`);
-    const dropdown = document.getElementById('exportDropdown');
-    dropdown.style.display = 'none';
-}
 
 function getStepsFromUrl() {
     const params = new URLSearchParams(window.location.search);
