@@ -147,7 +147,7 @@ async function handleClick(event) {
   // Add a "welcome" step if this is the first step
   if (steps.length === 0) {
     const welcomeStep = {
-      type: 'Navigate',
+      type: 'navigate',
       timestamp: new Date().toISOString(),
       message: 'Welcome to the recording session!',
       url: window.location.href

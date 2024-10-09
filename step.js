@@ -33,27 +33,9 @@ function createProjectData() {
         steps: displayedSteps.map(step => (
             step.type === 'click'
                 ? {
-                    stepType: step.type,
-                    targetUrl: step.url,
-                    screenshotUrl: step.screenshot,
-                    viewportWidth: step.viewportWidth,
-                    viewportHeight: step.viewportHeight,
-                    createdTime: step.timestamp,
-                    pageX: step.pageX,
-                    pageY: step.pageY,
-                    scrollX: step.scrollX,
-                    scrollY: step.scrollY,
-                    iframeX: step.x,
-                    iframeY: step.coordinates.y,
-                    innerText: step.target.innerText
-                } : step.type === 'Navigate' ?
-                    {
-                        stepType: step.type,
-                        targetUrl: step.url,
-                        createdTime: step.timestamp,
-                        innerText: step.message,
-                    } : {
-                        stepType: step.type,
+                    runtimeType: step.type,
+                    //runtimeType must be declared, as have to be clearify for @freezed
+                    clickStep: {
                         targetUrl: step.url,
                         screenshotUrl: step.screenshot,
                         viewportWidth: step.viewportWidth,
@@ -63,9 +45,34 @@ function createProjectData() {
                         pageY: step.pageY,
                         scrollX: step.scrollX,
                         scrollY: step.scrollY,
-                        iframeX: step.coordinates.x,
+                        iframeX: step.x,
                         iframeY: step.coordinates.y,
                         innerText: step.target.innerText
+                    }
+                } : step.type === 'navigate' ?
+                    {
+                        runtimeType: step.type,
+                        navigateStep: {
+                            targetUrl: step.url,
+                            createdTime: step.timestamp,
+                            innerText: step.message,
+                        }
+                    } : {
+                        runtimeType: step.type,
+                        clickStep: {
+                            targetUrl: step.url,
+                            screenshotUrl: step.screenshot,
+                            viewportWidth: step.viewportWidth,
+                            viewportHeight: step.viewportHeight,
+                            createdTime: step.timestamp,
+                            pageX: step.pageX,
+                            pageY: step.pageY,
+                            scrollX: step.scrollX,
+                            scrollY: step.scrollY,
+                            iframeX: step.coordinates.x,
+                            iframeY: step.coordinates.y,
+                            innerText: step.target.innerText
+                        }
                     }
         )),
         createdTime: new Date().toISOString()
