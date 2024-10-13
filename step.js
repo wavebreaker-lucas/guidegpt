@@ -28,8 +28,8 @@ function createProjectData() {
         id: 'unique-project-id',  // Generate or assign a unique ID
         title: 'Project Title',
         subtitle: 'Project Subtitle',
-        author: 'John Chong',
-        authorId: 'pK07huTGEJUMOylbMBmvZSuPYCu2',
+        author: 'matapass Guest',
+        authorId: 'TOyVEd848YMEx1gMA8m3kFKcvQ73',
         steps: displayedSteps.map(step => (
             step.type === 'click'
                 ? {
