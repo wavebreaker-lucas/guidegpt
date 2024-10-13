@@ -36,7 +36,6 @@ function createProjectData() {
                     runtimeType: step.type,
                     //runtimeType must be declared, as have to be clearify for @freezed
                     clickStep: {
-                        targetUrl: step.url,
                         screenshotUrl: step.screenshot,
                         viewportWidth: step.viewportWidth,
                         viewportHeight: step.viewportHeight,
@@ -60,7 +59,6 @@ function createProjectData() {
                     } : {
                         runtimeType: step.type,
                         clickStep: {
-                            targetUrl: step.url,
                             screenshotUrl: step.screenshot,
                             viewportWidth: step.viewportWidth,
                             viewportHeight: step.viewportHeight,
