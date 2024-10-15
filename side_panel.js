@@ -98,23 +98,100 @@ function continueRecording() {
   });
 }
 
+async function submitDataToDatabase() {
+  try {
+    const project = createProjectData(); // Collects and structures the project data
+    const response = await fetch('https://us-central1-matapass-716cc.cloudfunctions.net/readFirestore', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(project)
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    console.log('Project created successfully');
+  } catch (error) {
+    console.error('Error creating project:', error);
+  }
+}
+
+function createProjectData() {
+  console.log('steps', steps);
+  return {
+    id: 'unique-project-id',  // Generate or assign a unique ID
+    title: 'Project Title',
+    subtitle: 'Project Subtitle',
+    author: 'matapass Guest',
+    authorId: 'TOyVEd848YMEx1gMA8m3kFKcvQ73',
+    steps: steps.map(step => (
+      step.type === 'click'
+        ? {
+          runtimeType: step.type,
+          //runtimeType must be declared, as have to be clearify for @freezed
+          clickStep: {
+            screenshotUrl: step.screenshot,
+            viewportWidth: step.viewportWidth,
+            viewportHeight: step.viewportHeight,
+            createdTime: step.timestamp,
+            pageX: step.pageX,
+            pageY: step.pageY,
+            scrollX: step.scrollX,
+            scrollY: step.scrollY,
+            iframeX: step.x,
+            iframeY: step.y,
+            innerText: step.target.innerText
+          }
+        } : step.type === 'navigate' ?
+          {
+            runtimeType: step.type,
+            navigateStep: {
+              targetUrl: step.url,
+              createdTime: step.timestamp,
+              innerText: step.message,
+            }
+          } : {
+            runtimeType: step.type,
+            clickStep: {
+              screenshotUrl: step.screenshot,
+              viewportWidth: step.viewportWidth,
+              viewportHeight: step.viewportHeight,
+              createdTime: step.timestamp,
+              pageX: step.pageX,
+              pageY: step.pageY,
+              scrollX: step.scrollX,
+              scrollY: step.scrollY,
+              iframeX: step.x,
+              iframeY: step.y,
+              innerText: step.target.innerText
+            }
+          }
+    )),
+    createdTime: new Date().toISOString()
+  };
+}
+
 async function finishRecording() {
-  sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, (response) => {
-      if (response !== null) {
-          const stepsData = steps.map(step => ({
-              ...step,
-              coordinates: step.coordinates || { x: 0, y: 0 } // Default if not present
-          }));
-          const encodedStepsData = encodeURIComponent(JSON.stringify(stepsData));
-          const newUrl = `recorded_step.html?data=${encodedStepsData}`;
-          chrome.tabs.create({ url: newUrl }, () => {
-              isRecording = false;
-              isPausing = false;
-          });
-          window.close();
-      } else {
-          console.error("Failed to stop recording");
-      }
+  sendMessageWithRetry({ action: "setRecordingState", isRecording: false }, async (response) => {
+    if (response !== null) {
+      const stepsData = steps.map(step => ({
+        ...step,
+        coordinates: step.coordinates || { x: 0, y: 0 } // Default if not present
+      }));
+      const encodedStepsData = encodeURIComponent(JSON.stringify(stepsData));
+      const newUrl = `recorded_step.html?data=${encodedStepsData}`;
+      chrome.tabs.create({ url: newUrl }, () => {
+        isRecording = false;
+        isPausing = false;
+      });
+      await submitDataToDatabase();
+      window.close();
+    } else {
+      console.error("Failed to stop recording");
+    }
   });
 }
 
@@ -139,7 +216,7 @@ function updateStepList() {
   for (let i = currentStepCount; i < steps.length; i++) {
     const step = steps[i];
 
-    console.log('steps[i]',steps[i]);
+    console.log('steps[i]', steps[i]);
 
     if (currentStepCount === 0 && isRecording) {
       const firstFragment = document.createDocumentFragment();
@@ -282,18 +359,18 @@ function addRedCircle(img, step) {
   return {
     processedImage: canvas.toDataURL(),
     coordinates: { x, y }
-};
+  };
 }
 
 function processScreenshot(step) {
   return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-          const { processedImage, coordinates } = addRedCircle(img, step);
-          step.coordinates = coordinates; // Store the coordinates in the step
-          resolve(processedImage);
-      };
-      img.src = step.screenshot;
+    const img = new Image();
+    img.onload = () => {
+      const { processedImage, coordinates } = addRedCircle(img, step);
+      step.coordinates = coordinates; // Store the coordinates in the step
+      resolve(processedImage);
+    };
+    img.src = step.screenshot;
   });
 }
 startRecord, isRecording, isPausing
@@ -305,7 +382,7 @@ function updateRecordingUI() {
 }
 
 function updateUI() {
-  if (isAuthenticated) {}
+  if (isAuthenticated) { }
   sendMessageWithRetry({ action: "getState" }, (response) => {
     if (response !== null) {
       isRecording = response.isRecording;
