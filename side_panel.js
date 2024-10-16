@@ -121,8 +121,9 @@ async function submitDataToDatabase() {
 
 function createProjectData() {
   console.log('steps', steps);
+  var newid  = 'id-' + Math.random().toString(36).substr(2, 9);
   return {
-    id: 'unique-project-id',  // Generate or assign a unique ID
+    id: newid,  // Generate or assign a unique ID
     title: 'Project Title',
     subtitle: 'Project Subtitle',
     author: 'matapass Guest',
