@@ -86,6 +86,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Handle external messages (e.g., from Flutter web app)
+chrome.runtime.onMessageExternal.addListener(
+  (request, sender, sendResponse) => {
+    if (request.action === "openSidePanel") {
+      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (tabs[0]) {
+          chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
+            sendResponse({status: "Side panel opened"});
+          }).catch((error) => {
+            console.error("Error opening side panel:", error);
+            sendResponse({status: "Error opening side panel", error: error.message});
+          });
+        } else {
+          sendResponse({status: "No active tab found"});
+        }
+      });
+      return true; // Indicates that the response is sent asynchronously
+    }
+  }
+);
+
 function broadcastUpdate() {
   // Broadcast the updated state to all tabs and the side panel
   const updateMessage = { action: "updateSteps", steps: steps, isRecording: isRecording };
