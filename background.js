@@ -89,20 +89,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle external messages (e.g., from Flutter web app)
 chrome.runtime.onMessageExternal.addListener(
   (request, sender, sendResponse) => {
-    if (request.action === "openSidePanel") {
+    console.log("Received external message:", request);
+    console.log("Message type:", typeof request);
+    console.log("Sender:", sender);
+    
+    let parsedRequest = request;
+    if (typeof request === 'string') {
+      try {
+        parsedRequest = JSON.parse(request);
+      } catch (e) {
+        console.error("Error parsing request:", e);
+        sendResponse({status: "Error", error: "Invalid JSON"});
+        return;
+      }
+    }
+    
+    console.log("Parsed request:", parsedRequest);
+    const action = parsedRequest.action;
+    console.log("Action:", action);
+    
+    if (action === "openSidePanel") {
       chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         if (tabs[0]) {
-          chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
-            sendResponse({status: "Side panel opened"});
-          }).catch((error) => {
-            console.error("Error opening side panel:", error);
-            sendResponse({status: "Error opening side panel", error: error.message});
-          });
+          chrome.sidePanel.open({tabId: tabs[0].id})
+            .then(() => {
+              console.log("Side panel opened successfully");
+              sendResponse({status: "Success", message: "Side panel opened"});
+            })
+            .catch((error) => {
+              console.error("Error opening side panel:", error);
+              sendResponse({status: "Error", error: error.message});
+            });
         } else {
-          sendResponse({status: "No active tab found"});
+          console.warn("No active tab found");
+          sendResponse({status: "Error", error: "No active tab found"});
         }
       });
+
       return true; // Indicates that the response is sent asynchronously
+    } else {
+      console.warn("Unknown action:", action);
+      sendResponse({status: "Error", error: "Unknown action"});
     }
   }
 );
